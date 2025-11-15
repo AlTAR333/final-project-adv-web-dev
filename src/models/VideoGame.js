@@ -1,7 +1,7 @@
 import dbModule, { saveDatabase } from "../config/database.js";
 
-class User {
-  static tableName = "users";
+class VideoGame {
+  static tableName = "video_games";
 
   static get db() {
     return dbModule.db;
@@ -11,8 +11,12 @@ class User {
     const sql = `
       CREATE TABLE IF NOT EXISTS ${this.tableName} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE,
+        title TEXT NOT NULL,
+        genre TEXT,
+        platform TEXT,
+        releaseYear INTEGER,
+        rating REAL,
+        price REAL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -43,40 +47,19 @@ class User {
     return row;
   }
 
-  static findByEmail(email) {
+  static create({ title, genre, platform, releaseYear, rating, price }) {
     const stmt = this.db.prepare(
-      `SELECT * FROM ${this.tableName} WHERE email = ?`
+      `INSERT INTO ${this.tableName} (title, genre, platform, releaseYear, rating, price)
+       VALUES (?, ?, ?, ?, ?, ?)`
     );
-    stmt.bind([email]);
-    const row = stmt.step() ? stmt.getAsObject() : null;
-    stmt.free();
-    return row;
-  }
-
-  static emailExists(email, excludeId = null) {
-    if (!email) return false;
-    let stmt;
-    if (excludeId) {
-      stmt = this.db.prepare(
-        `SELECT id FROM ${this.tableName} WHERE email = ? AND id != ?`
-      );
-      stmt.bind([email, excludeId]);
-    } else {
-      stmt = this.db.prepare(
-        `SELECT id FROM ${this.tableName} WHERE email = ?`
-      );
-      stmt.bind([email]);
-    }
-    const exists = stmt.step();
-    stmt.free();
-    return exists;
-  }
-
-  static create({ name, email }) {
-    const stmt = this.db.prepare(
-      `INSERT INTO ${this.tableName} (name, email) VALUES (?, ?)`
-    );
-    stmt.bind([name, email || null]);
+    stmt.bind([
+      title,
+      genre || null,
+      platform || null,
+      releaseYear || null,
+      rating || null,
+      price || null,
+    ]);
     stmt.step();
     stmt.free();
 
@@ -90,22 +73,40 @@ class User {
     return this.findById(lastId);
   }
 
-  static update(id, { name, email }) {
+  static update(id, { title, genre, platform, releaseYear, rating, price }) {
     const updates = [];
     const values = [];
-    if (name !== undefined) {
-      updates.push("name = ?");
-      values.push(name);
+
+    if (title !== undefined) {
+      updates.push("title = ?");
+      values.push(title);
     }
-    if (email !== undefined) {
-      updates.push("email = ?");
-      values.push(email);
+    if (genre !== undefined) {
+      updates.push("genre = ?");
+      values.push(genre);
+    }
+    if (platform !== undefined) {
+      updates.push("platform = ?");
+      values.push(platform);
+    }
+    if (releaseYear !== undefined) {
+      updates.push("releaseYear = ?");
+      values.push(releaseYear);
+    }
+    if (rating !== undefined) {
+      updates.push("rating = ?");
+      values.push(rating);
+    }
+    if (price !== undefined) {
+      updates.push("price = ?");
+      values.push(price);
     }
     updates.push("updated_at = CURRENT_TIMESTAMP");
 
     if (updates.length === 1) {
       return this.findById(id);
     }
+
     values.push(id);
     const stmt = this.db.prepare(
       `UPDATE ${this.tableName} SET ${updates.join(", ")} WHERE id = ?`
@@ -145,15 +146,43 @@ class User {
 
   static seed() {
     if (this.count() > 0) return;
-    console.log("Seeding users table...");
+    console.log("Seeding video_games table...");
     [
-      { name: "Alice", email: "alice@example.com" },
-      { name: "Bob", email: "bob@example.com" },
-      { name: "Charlie", email: "charlie@example.com" },
-      { name: "Dave", email: "dave@example.com" },
-    ].forEach((u) => this.create(u));
+      {
+        title: "The Legend of Zelda: Breath of the Wild",
+        genre: "Action-Adventure",
+        platform: "Nintendo Switch",
+        releaseYear: 2017,
+        rating: 9.7,
+        price: 59.99,
+      },
+      {
+        title: "God of War",
+        genre: "Action-Adventure",
+        platform: "PlayStation 4",
+        releaseYear: 2018,
+        rating: 9.5,
+        price: 49.99,
+      },
+      {
+        title: "Hades",
+        genre: "Roguelike",
+        platform: "PC",
+        releaseYear: 2020,
+        rating: 9.3,
+        price: 24.99,
+      },
+      {
+        title: "Elden Ring",
+        genre: "Action RPG",
+        platform: "Multi-platform",
+        releaseYear: 2022,
+        rating: 9.6,
+        price: 59.99,
+      },
+    ].forEach((g) => this.create(g));
     console.log("Seed complete");
   }
 }
 
-export default User;
+export default VideoGame;
